@@ -131,6 +131,11 @@ app.add_middleware(
     allow_headers=["*"],             # Allow all headers
 )
 
+@app.get("/health")
+def health_check():
+    return {
+        "message": "System is in good condition"
+    }
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
