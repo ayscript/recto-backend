@@ -1,5 +1,5 @@
 [project]
-name = "recto-backend"
+name = "recto-backend-and-agent-v2"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,10 +7,13 @@ requires-python = ">=3.14"
 dependencies = [
     "dotenv>=0.9.9",
     "fastapi>=0.128.0",
-    "langchain-core>=1.2.7",
+    "langchain>=1.2.8",
     "langchain-google-genai>=4.2.0",
     "langgraph>=1.0.7",
     "pydantic[email]>=2.12.5",
     "supabase>=2.27.2",
+    "langgraph-checkpoint-postgres>=3.0.4",
+    "pip>=26.0",
+    "psycopg[binary,pool]>=3.3.2",
     "uvicorn>=0.40.0",
 ]

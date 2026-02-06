@@ -17,15 +17,28 @@ from dotenv import load_dotenv
 from supabase import Client
 
 load_dotenv()
+from fastapi import FastAPI
+from pydantic import BaseModel
+from agent.chatbot import (
+    chat_with_agent,
+    get_conversation_history,
+    get_all_user_sessions,
+)
 
 
-# Pydantic models for API Validation
+app = FastAPI()
+# Defining the class the backend receives and sends
+
+
 class ChatRequest(BaseModel):
+    user_id: str
     session_id: str
     message: str
 
 
 class ChatResponse(BaseModel):
+    user_id: str
+    session_id: str
     response: str
 
 
@@ -229,29 +242,24 @@ async def chat_endpoint(
     Sends a message to the chatbot.
     The session_id is used to retrieve previous context.
     """
+
+
+@app.get("/")
+def check_health():
+    return {"message": "api in very good condition !"}
+
+
+@app.post("/chats")
+async def chats(request: ChatRequest):
     try:
-        config = {"configurable": {"thread_id": request.session_id}}
-        input_message = HumanMessage(content=request.message)
-
-        output = graph.invoke({"messages": [input_message]}, config=config)
-        last_message = output["messages"][-1]
-
-        # --- FIX STARTS HERE ---
-        # content can be a string OR a list of parts (e.g. [{'type': 'text', 'text': ...}])
-        raw_content = last_message.content
-
-        if isinstance(raw_content, list):
-            # Extract text from all parts and join them
-            final_text = "".join(
-                [part["text"] for part in raw_content if "text" in part]
-            )
-        else:
-            # It's already a string
-            final_text = str(raw_content)
-        # --- FIX ENDS HERE ---
-
-        return ChatResponse(response=final_text)
-
+        reply = chat_with_agent(
+            user_id=request.user_id,
+            session_id=request.session_id,
+            message=request.message,
+        )
+        return ChatResponse(
+            user_id=request.user_id, session_id=request.session_id, response=reply
+        )
     except Exception as e:
         # It's helpful to print the error to console for debugging
         print(f"Error: {e}")
@@ -260,16 +268,24 @@ async def chat_endpoint(
 
 @app.get("/history/{session_id}")
 async def get_history(session_id: str = Depends(get_current_user)):
-    """
-    Retrieves the raw chat history for a specific session.
-    """
-    config = {"configurable": {"thread_id": session_id}}
+    print("Error", e)
 
-    # get_state returns a snapshot of the graph for this config
-    state_snapshot = graph.get_state(config)
 
-    if not state_snapshot.values:
-        return {"history": []}
+@app.get("/history/{user_id}/{session_id}")
+async def get_history(user_id: str, session_id: str):
+    # Call the agent function
+    history = get_conversation_history(user_id, session_id)
+
+    return {"conversation": history}
+
+
+@app.get("/sessions/{user_id}")
+def get_sessions_per_user(user_id: str):
+    """
+    Get all sessions peculiar to each user
+    """
+    sessions = get_all_user_sessions(user_id)
+    return {"user_id": user_id, "sessions": sessions}
 
     # Extract messages and format them simply for JSON
     messages = state_snapshot.values["messages"]
@@ -303,11 +319,11 @@ class LoginSchema(BaseModel):
 def signup(payload: SignupSchema):
     try:
         res = supabase.auth.sign_up(
-        {
-            "email": payload.email,
-            "password": payload.password,
-            "options": {"data": {"display_name": payload.display_name}},
-        }
+            {
+                "email": payload.email,
+                "password": payload.password,
+                "options": {"data": {"display_name": payload.display_name}},
+            }
         )
         if res.user is None:
             raise HTTPException(status_code=400, detail="Signup failed")
@@ -315,7 +331,6 @@ def signup(payload: SignupSchema):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=401, detail=str(e))
-
 
 
 @app.post("/login")
