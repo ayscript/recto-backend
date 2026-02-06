@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ayscript Web Developer Flier</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Poppins:wght@300;400;600&display=swap");
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #0f0f12;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+      canvas {
+        border-radius: 4px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="flyer" width="600" height="800"></canvas>
+    <script>
+      const canvas = document.getElementById("flyer");
+      const ctx = canvas.getContext("2d");
+
+      // Config
+      const W = 600;
+      const H = 800;
+      const PADDING = 40;
+      const ACCENT_ONE = "#6366f1"; // Indigo
+      const ACCENT_TWO = "#22d3ee"; // Cyan
+      const DARK_BG = "#0f0f12";
+      const LIGHT_TEXT = "#ffffff";
+      const SUB_TEXT = "#a1a1aa";
+
+      // Text Data
+      const headline = "AYS CRIPT";
+      const subhead = "Expert Web Development & Digital Solutions";
+      const bio =
+        "Building scalable, high-performance web applications with modern technologies. From responsive frontends to robust backends, I craft seamless digital experiences that drive growth and engagement.";
+      const phoneLabel = "Call / WhatsApp";
+      const phoneNumber = "07014329650";
+      const portfolioLabel = "View Portfolio";
+      const portfolioUrl = "https://ayscript.vercel.app";
+
+      // Helper: Wrap Text
+      function wrapText(
+        ctx,
+        text,
+        x,
+        y,
+        maxWidth,
+        lineHeight,
+        align = "center",
+      ) {
+        const words = text.split(" ");
+        let line = "";
+        const lines = [];
+
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + " ";
+          const metrics = ctx.measureText(testLine);
+          const testWidth = metrics.width;
+          if (testWidth > maxWidth && i > 0) {
+            lines.push(line);
+            line = words[i] + " ";
+          } else {
+            line = testLine;
+          }
+        }
+        lines.push(line);
+
+        lines.forEach((l, index) => {
+          ctx.textAlign = align;
+          ctx.fillText(l.trim(), x, y + index * lineHeight);
+        });
+
+        return lines.length * lineHeight;
+      }
+
+      // Helper: Draw Rounded Rectangle
+      function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(
+          x + width,
+          y + height,
+          x + width - radius,
+          y + height,
+        );
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        if (fill) {
+          ctx.fillStyle = fill;
+          ctx.fill();
+        }
+        if (stroke) {
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      // Drawing Logic
+      window.onload = () => {
+        // Load Fonts
+        document.fonts.load('700 64px "Oswald"').then(() => {
+          document.fonts.load('600 24px "Oswald"').then(() => {
+            document.fonts.load('400 18px "Poppins"').then(() => {
+              document.fonts.load('300 16px "Poppins"').then(() => {
+                draw();
+              });
+            });
+          });
+        });
+      };
+
+      function draw() {
+        // 1. Background
+        // Create abstract gradient background
+        const gradient = ctx.createLinearGradient(0, 0, W, H);
+        gradient.addColorStop(0, "#0f0f12");
+        gradient.addColorStop(0.5, "#111827");
+        gradient.addColorStop(1, "#0a0a0c");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, W, H);
+
+        // Decorative Glow (Top Left)
+        const glowGradient = ctx.createRadialGradient(
+          150,
+          150,
+          0,
+          150,
+          150,
+          300,
+        );
+        glowGradient.addColorStop(0, "rgba(99, 102, 241, 0.15)");
+        glowGradient.addColorStop(1, "rgba(99, 102, 241, 0)");
+        ctx.fillStyle = glowGradient;
+        ctx.fillRect(0, 0, W, H);
+
+        // 2. Headline (Ays Script)
+        ctx.fillStyle = LIGHT_TEXT;
+        ctx.font = "700 72px 'Oswald'";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(headline, W / 2, PADDING + 20);
+
+        // Subheadline
+        ctx.font = "600 28px 'Oswald'";
+        ctx.fillStyle = ACCENT_TWO;
+        ctx.shadowColor = ACCENT_TWO;
+        ctx.shadowBlur = 20;
+        ctx.fillText(subhead, W / 2, PADDING + 140);
+        ctx.shadowBlur = 0;
+
+        // 3. Bio Section
+        const bioX = PADDING + 30;
+        const bioY = PADDING + 220;
+        const bioWidth = W - PADDING * 2 - 60;
+
+        // Bio Box Background
+        roundRect(
+          ctx,
+          bioX,
+          bioY - 10,
+          bioWidth,
+          160,
+          8,
+          "rgba(255,255,255,0.03)",
+          "rgba(255,255,255,0.05)",
+        );
+
+        ctx.fillStyle = SUB_TEXT;
+        ctx.font = "300 18px 'Poppins'";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        wrapText(ctx, bio, bioX + 20, bioY + 20, bioWidth - 40, 26);
+
+        // 4. Contact Section (Bottom Cards)
+        const contactY = H - 200;
+        const cardWidth = W / 2 - 30;
+        const cardHeight = 100;
+        const cardRadius = 12;
+
+        // Phone Card
+        roundRect(
+          ctx,
+          PADDING,
+          contactY,
+          cardWidth,
+          cardHeight,
+          cardRadius,
+          "rgba(99, 102, 241, 0.15)",
+          ACCENT_ONE,
+        );
+        ctx.fillStyle = LIGHT_TEXT;
+        ctx.font = "600 20px 'Poppins'";
+        ctx.textAlign = "left";
+        ctx.fillText(phoneLabel, PADDING + 25, contactY + 25);
+        ctx.font = "600 32px 'Poppins'";
+        ctx.fillStyle = ACCENT_ONE;
+        ctx.fillText(phoneNumber, PADDING + 25, contactY + 60);
+
+        // Portfolio Card
+        roundRect(
+          ctx,
+          W / 2 + 10,
+          contactY,
+          cardWidth,
+          cardHeight,
+          cardRadius,
+          "rgba(34, 211, 238, 0.15)",
+          ACCENT_TWO,
+        );
+        ctx.fillStyle = LIGHT_TEXT;
+        ctx.font = "600 20px 'Poppins'";
+        ctx.textAlign = "left";
+        ctx.fillText(portfolioLabel, W / 2 + 10 + 25, contactY + 25);
+        ctx.font = "600 28px 'Poppins'";
+        ctx.fillStyle = ACCENT_TWO;
+        // Adjust font size for long URL if needed, but this fits well
+        wrapText(
+          ctx,
+          portfolioUrl,
+          W / 2 + 10 + 25,
+          contactY + 60,
+          cardWidth - 50,
+          24,
+          "left",
+        );
+
+        // 5. Decorative Lines
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, H - 260);
+        ctx.lineTo(W, H - 260);
+        ctx.stroke();
+
+        // Bottom accent line
+        ctx.fillStyle = ACCENT_TWO;
+        ctx.fillRect(PADDING, H - 20, W - PADDING * 2, 4);
+
+        // Signature / Footer
+        ctx.fillStyle = SUB_TEXT;
+        ctx.font = "400 14px 'Poppins'";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          "© " + new Date().getFullYear() + " Ayscript. All Rights Reserved.",
+          W / 2,
+          H - 60,
+        );
+      }
+    </script>
+  </body>
+</html>

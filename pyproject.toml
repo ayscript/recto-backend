@@ -10,5 +10,7 @@ dependencies = [
     "langchain-core>=1.2.7",
     "langchain-google-genai>=4.2.0",
     "langgraph>=1.0.7",
+    "pydantic[email]>=2.12.5",
+    "supabase>=2.27.2",
     "uvicorn>=0.40.0",
 ]

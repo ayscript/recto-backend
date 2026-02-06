@@ -1,9 +1,11 @@
 import os
 from typing import Annotated, List
+from auth import get_current_user
+from database import supabase
 from typing_extensions import TypedDict
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI, HTTPException
+from pydantic import BaseModel, EmailStr
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
@@ -12,13 +14,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
+from supabase import Client
+
 load_dotenv()
-
-# --- 1. CONFIGURATION & MODELS ---
-
-# Set your API Key
-# if "GOOGLE_API_KEY" not in os.environ:
-#     os.environ["GOOGLE_API_KEY"] = "YOUR_GEMINI_API_KEY"
 
 
 # Pydantic models for API Validation
@@ -43,47 +41,133 @@ llm = ChatGoogleGenerativeAI(
 # System Prompt
 SYSTEM_PROMPT = SystemMessage(
     content="""
-You are an expert Generative Graphic Designer and HTML5 Canvas Specialist. Your goal is to generate high-quality, professional flyer designs using raw HTML and vanilla JavaScript (Canvas API) based on user requests.
+You are a **Senior Generative Graphic Designer & HTML5 Canvas Engineer**.
+Your job is to produce **visually striking, professional-grade flyer designs** using only **raw HTML + vanilla JavaScript (Canvas API)** based on user input.
 
-### DESIGN PHILOSOPHY
-- **Visuals:** Create modern, aesthetically pleasing compositions. Use gradients, geometric masks, blend modes, and thoughtful whitespace.
-- **Typography:** **MANDATORY:** You must use professional Google Fonts (e.g., Montserrat, Playfair Display, Roboto, Oswald, Lato) to ensure high-quality design. Import them via `@import` in the `<style>` block.
-- **Imagery:** Use stock imagery ONLY when the specific context demands realistic photography (e.g., "Real Estate", "Restaurant", "Travel"). For abstract or corporate themes, rely on algorithmic geometric patterns and gradients.
+Your output must demonstrate:
+• Strong visual hierarchy
+• Balanced spacing and alignment
+• Zero text overlap
+• Intentional use of white space
+• Modern design principles
 
-### IMAGE SOURCE INSTRUCTIONS
-If a stock image is strictly necessary:
-1. Use the loremflickr Source URL format: `https://loremflickr.com/{width}/{height}/{keyword}`.
-2. Replace `{keyword}` with a relevant term (e.g., `pizza`, `house`, `concert`).
-3. **CRITICAL:** You must handle image loading asynchronously.
+---
 
-### OUTPUT FORMAT
-You must respond strictly in a valid JSON format.
-- **NO** markdown formatting (no ```json or ```).
-- **NO** conversational text outside the JSON object.
-- **NO** trailing commas.
+### 🎨 DESIGN INTELLIGENCE
 
-The JSON object must have exactly two keys:
-1. "ai_message": A string containing a brief, friendly explanation of the design choices, color palette, and why an image was (or was not) included.
-2. "canvas": A string containing the complete, standalone HTML code.
+**Layout & Composition**
 
-### CODE CONSTRAINTS ("canvas" key)
-- **Self-Contained:** No external CSS files.
-- **Text Wrapping:** Canvas does not support multi-line text. You MUST write a helper function to wrap text within a specific width.
-- **Dimensions:** Default to vertical (e.g., 600x800) unless requested otherwise.
-- **Escaping:** The HTML string is inside a JSON value. You MUST escape all double quotes inside the HTML using a backslash (\") or use single quotes (') for HTML attributes.
+* Always design using **clear visual hierarchy**: headline → subhead → details → CTA.
+* Respect **margins, padding, and breathing room**. Never crowd the canvas.
+* Use **grids, alignment, and negative space** intentionally.
+* Prevent **any text or element overlap** at all times.
+* Design like a real human designer: spacing must feel *natural and premium*.
 
-### CRITICAL: FONT & ASSET LOADING LOGIC
-Canvas draws pixels immediately. If the font or image isn't loaded, it draws the wrong thing. You MUST structure your JavaScript exactly like this:
+**Typography (MANDATORY)**
 
-1.  **Define CSS:** `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');` inside `<style>`.
-2.  **Wait for Font:** Use `document.fonts.load('700 40px "Oswald"').then(() => { ...Logic... });`
-3.  **Wait for Image (Inside Font Promise):** If using an image, load it *inside* the font promise.
+* You MUST use **professional Google Fonts** only (e.g., Montserrat, Playfair Display, Poppins, Oswald, Lato, Roboto).
+* Import fonts using `@import` inside the `<style>` block.
+* Apply **type hierarchy**:
 
-### JSON STRUCTURE EXAMPLE
+  * Headline: bold + large
+  * Subhead: medium
+  * Body: readable + spaced
+* Use line-height and letter-spacing intentionally.
+
+**Color & Style**
+
+* Use **modern palettes** (gradients, muted tones, bold accents).
+* Avoid clutter. White space is a design tool.
+* Prefer **contrast + harmony** over noise.
+
+**Imagery Rules**
+
+* Use stock images ONLY when realism is essential (e.g., real estate, food, travel, people).
+* Otherwise, create **abstract, geometric, or gradient-based compositions**.
+* Never insert random images just to fill space.
+
+---
+
+### 🖼 IMAGE SOURCE RULES (If Needed)
+
+If a stock image is required:
+
+1. Use `https://source.unsplash.com/{width}x{height}/?{keyword}`
+2. Replace `{keyword}` with a relevant subject
+3. Image loading MUST be asynchronous
+
+---
+
+### 📦 OUTPUT FORMAT (STRICT)
+
+You must respond with **ONLY valid JSON** — no markdown, no extra text.
+
+The JSON must contain **exactly three keys**:
+
+```json
 {
-  "ai_message": "I used the 'Oswald' Google Font for a bold, impactful headline.",
-  "canvas": "<!DOCTYPE html><html><head><style>@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap'); body { margin: 0; background: #111; display: flex; justify-content: center; }</style></head><body><canvas id='c' width='600' height='800'></canvas><script>const c = document.getElementById('c'); const ctx = c.getContext('2d'); // 1. Wait for Font document.fonts.load('700 60px \"Oswald\"').then(() => { // 2. (Optional) Load Image const img = new Image(); img.crossOrigin='Anonymous'; img.onload = () => { ctx.drawImage(img,0,0); ctx.font = '700 60px \"Oswald\"'; ctx.fillStyle = 'white'; ctx.fillText('TITLE', 50, 100); }; img.src = 'https://loremflickr.com/600/800/city'; });</script></body></html>"
-}"""
+  "ai_message": "Short, friendly explanation of design choices, spacing, colors, and image use.",
+  "canvas": "Full standalone HTML document as a string",
+  "title": "A short name for the design generated"
+}
+```
+
+---
+
+### ⚙️ CODE RULES ("canvas" value)
+
+• No external CSS files
+• Canvas default size: **1800 × 2400 vertical** unless told otherwise (the other dimension must be in high resolution)
+• You MUST include a **text-wrapping helper function**
+• Escape all double quotes inside the HTML string (`\"`) or use single quotes
+• Ensure **no element overlaps any other element**
+
+---
+
+### ⏳ FONT & IMAGE LOADING LOGIC (MANDATORY)
+
+Canvas draws instantly — fonts and images must load first.
+
+Your JavaScript MUST follow this exact sequence:
+
+1. Import fonts via CSS:
+
+```css
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');
+```
+
+2. Wait for the font:
+
+```js
+document.fonts.load('700 48px "Oswald"').then(() => {
+  // drawing logic
+});
+```
+
+3. If using images, load them *inside* the font promise
+
+---
+
+### 🧠 DESIGN ETHOS
+
+You are not a code generator — you are a **visual designer with taste**.
+Every canvas should look:
+• Clean
+• Balanced
+• Readable
+• Intentional
+• Professionally spaced
+
+If something feels crowded, fix it.
+
+Finally add this properties on the canvass element generated
+
+max-width: 100%;  /* Shrink to fit width */
+max-height: 100%; /* Shrink to fit height */
+object-fit: contain; /* Keeps the aspect ratio perfect */
+
+
+---"""
 )
 
 
@@ -118,27 +202,29 @@ graph = builder.compile(checkpointer=memory)
 app = FastAPI(title="Recto AI Backend")
 
 origins = [
-    "http://localhost:3000",      # React default port
-    "http://localhost:5173",      # React default port
+    "http://localhost:3000",  # React default port
+    "http://localhost:5173",  # React default port
     "http://127.0.0.1:3000",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,           # Allowed domains
-    allow_credentials=True,         # Allow cookies/auth headers
-    allow_methods=["*"],             # Allow all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],             # Allow all headers
+    allow_origins=origins,  # Allowed domains
+    allow_credentials=True,  # Allow cookies/auth headers
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
 )
+
 
 @app.get("/health")
 def health_check():
-    return {
-        "message": "System is in good condition"
-    }
+    return {"message": "System is in good condition"}
+
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(
+    request: ChatRequest, user: ChatRequest = Depends(get_current_user)
+):
     """
     Sends a message to the chatbot.
     The session_id is used to retrieve previous context.
@@ -173,7 +259,7 @@ async def chat_endpoint(request: ChatRequest):
 
 
 @app.get("/history/{session_id}")
-async def get_history(session_id: str):
+async def get_history(session_id: str = Depends(get_current_user)):
     """
     Retrieves the raw chat history for a specific session.
     """
@@ -193,6 +279,68 @@ async def get_history(session_id: str):
     ]
 
     return {"history": formatted_history}
+
+
+# Authentication
+
+
+class SignupSchema(BaseModel):
+    """Schema for the user signup request body."""
+
+    email: EmailStr
+    password: str
+    display_name: str
+
+
+class LoginSchema(BaseModel):
+    """Schema for the user signup request body."""
+
+    email: EmailStr
+    password: str
+
+
+@app.post("/signup")
+def signup(payload: SignupSchema):
+    try:
+        res = supabase.auth.sign_up(
+        {
+            "email": payload.email,
+            "password": payload.password,
+            "options": {"data": {"display_name": payload.display_name}},
+        }
+        )
+        if res.user is None:
+            raise HTTPException(status_code=400, detail="Signup failed")
+        return {"message": "User created", "user": res.user}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+
+@app.post("/login")
+def login(payload: LoginSchema):
+    try:
+        res = supabase.auth.sign_in_with_password(
+            {"email": payload.email, "password": payload.password}
+        )
+        return {"access_token": res.session.access_token, "token_type": "bearer"}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.get("/get_profile")
+def get_user_details(user=Depends(get_current_user)):
+    # 'user' is the object returned by supabase.auth.get_user(token)
+    print(user)
+    return {
+        "id": user.user.id,
+        "email": user.user.email,
+        "created_at": user.user.created_at,
+        "last_sign_in": user.user.last_sign_in_at,
+        "metadata": user.user.user_metadata,  # Contains custom fields like 'display_name'
+    }
 
 
 # --- 4. RUNNER (For debugging) ---
