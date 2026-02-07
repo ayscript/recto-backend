@@ -46,7 +46,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Allowed domains
+    allow_origins=["*"],  # Allowed domains
     allow_credentials=True,  # Allow cookies/auth headers
     allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
@@ -85,7 +85,7 @@ async def get_history(session_id: str, user=Depends(get_current_user)):
     return {"conversation": history}
 
 
-@app.get("/sessions/")
+@app.get("/sessions")
 def get_sessions_per_user(user=Depends(get_current_user)):
     """
     Get all sessions peculiar to each user
