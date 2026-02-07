@@ -40,7 +40,8 @@ origins = [
     "http://localhost:3000",  # React default port
     "http://localhost:5173",  # React default port
     "http://127.0.0.1:3000",
-    "https://recto-app.netlify.app/" # Deployed frontend URL
+    "https://recto-app.netlify.app/", # Deployed frontend URL
+    "https://recto.pxxl.click", # Deployed frontend URL
 ]
 
 app.add_middleware(
