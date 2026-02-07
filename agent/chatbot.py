@@ -16,7 +16,7 @@ DB_URL = os.getenv("SUPABASE_DB_URL")
 connection = psycopg.connect(DB_URL, sslmode="require", autocommit=True)
 
 
-llm = ChatGoogleGenerativeAI(model="gemini-3-flash", temperature=1.5, max_retries=2)
+llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=1.5, max_retries=2)
 
 
 sys_prompt = SystemMessage(
