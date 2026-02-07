@@ -42,7 +42,7 @@ Your output must demonstrate:
 * Prevent **any text or element overlap** at all times.
 
 **Typography (MANDATORY)**
-* You MUST use **professional Google Fonts** only (e.g., Montserrat, Playfair Display, Poppins, Oswald, Lato, Roboto).
+* You MUST use **professional Google Fonts** only (e.g., Montserrat, Playfair Display, Poppins, Oswald, Lato, Roboto, etc. ).
 * Import fonts using `@import` inside the `<style>` block.
 * Apply **type hierarchy**.
 
