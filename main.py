@@ -14,6 +14,7 @@ from agent.chatbot import (
     chat_with_agent,
     get_conversation_history,
     get_all_user_sessions,
+    connection,
 )
 
 
@@ -46,7 +47,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allowed domains
+    allow_origins=[origins],  # Allowed domains
     allow_credentials=True,  # Allow cookies/auth headers
     allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
@@ -94,14 +95,28 @@ def get_sessions_per_user(user=Depends(get_current_user)):
     sessions = get_all_user_sessions(user_id)
     return {"user_id": user_id, "sessions": sessions}
 
-    # Extract messages and format them simply for JSON
-    # messages = state_snapshot.values["messages"]
-    # formatted_history = [
-    #     {"role": "user" if isinstance(m, HumanMessage) else "ai", "content": m.content}
-    #     for m in messages
-    # ]
 
-    # return {"history": formatted_history}
+@app.delete("/session/delete/{session_id}")
+async def delete_session(session_id: str, user=Depends(get_current_user)):
+    """
+    Delete all stored checkpoints for a given user session.
+    """
+    try:
+        user_id = user.user.id
+        unique_id = f"{user_id}: {session_id}"
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            DELETE FROM checkpoints
+            WHERE thread_id = %s
+            """,
+            (unique_id,)
+        )
+        cursor.close()
+        return {"message": "Session deleted", "session_id": session_id}
+    except Exception as e:
+        print(f"Error deleting session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Authentication
