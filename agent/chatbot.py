@@ -1,22 +1,39 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
 from typing_extensions import TypedDict, Annotated
 from langgraph.checkpoint.postgres import PostgresSaver
+
 import os
 import psycopg
 
-
+from openai import OpenAI
+client = OpenAI()
 load_dotenv()
+# response = client.responses.create(
+#     model="gpt-5.5",
+#     input="Write a short bedtime story about a unicorn."
+# )
 
+# print(response.output_text)
+
+openai_key = os.getenv("OPENAI_API_KEY")
 DB_URL = os.getenv("SUPABASE_DB_URL")
+# Ensure DB_URL is set (psycopg.connect requires a str, not None)
+if not DB_URL:
+    raise RuntimeError("Environment variable SUPABASE_DB_URL is not set")
 
 connection = psycopg.connect(DB_URL, sslmode="require", autocommit=True)
 
 
-llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=1.5, max_retries=2)
+#llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=1.5, max_retries=2)
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature = 0,
+    api_key = openai_key
+)
 
 
 sys_prompt = SystemMessage(
